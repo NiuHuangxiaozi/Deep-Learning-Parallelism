@@ -5,7 +5,7 @@
 ## 一、实验目的
 
 这个是pytorch的教材上面的一个例子，使用rpc实现resnet50在单机两张显卡上的流水线并行训练
-
+https://pytorch.org/tutorials/intermediate/dist_pipeline_parallel_tutorial.html?highlight=model%20parallel%20best%20practices
 值得注意的部分是：
 
 1、rpc.remote函数 返回RRef ，使用to_here卸载到本地
