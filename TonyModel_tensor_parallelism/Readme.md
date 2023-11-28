@@ -6,7 +6,7 @@
 
 [examples/distributed/tensor_parallelism at main · pytorch/examples (github.com)](https://github.com/pytorch/examples/tree/main/distributed/tensor_parallelism)
 
-主要学习了DTensor库
+主要学习了DTensor库，使用torchrun来启动
 
 ## 二、实验配置
 
