@@ -44,19 +44,19 @@ class Distributed_Elastic_Sampler(Sampler[T_co]):
         self.partition_strategy=partition_strategy
         # If the dataset length is evenly divisible by # of replicas, then there
         # is no need to drop any data, since the dataset will be split equally.
+        self.num_samples=None
+        self.total_size=None
         if self.partition_strategy["method"]=='even':
             self.even_partition()
         else:
             self.auto_partition()
-
         self.shuffle = shuffle
         self.seed = seed
     def auto_partition(self):
         if self.partition_strategy["method"]=="manual":
             self.num_samples= self.partition_strategy["manual_partition_list"]
-            print(self.num_samples)
+            assert (self.num_replicas == len(self.num_samples))
             self.total_size=sum(self.num_samples)
-            print(self.total_size)
             assert self.total_size==len(self.dataset), str(self.total_size)+" not equal to "+str(len(self.dataset))
         else:
             assert(self.partition_strategy["method"]=="manual")
@@ -97,18 +97,11 @@ class Distributed_Elastic_Sampler(Sampler[T_co]):
             indices = indices[:self.total_size]
         assert len(indices) == self.total_size
 
-        pre_index=0
-        indices_list=[]
-        for val in self.num_samples:
-            indices_list.append(indices[pre_index:pre_index+val])
-            pre_index+=val
         # subsample
-        print(indices_list)
-        print(self.num_samples)
-        for indices in indices_list:
-            assert len(indices) == self.num_samples[self.rank]
+        indices = indices[self.rank:self.total_size:self.num_replicas]
+        assert len(indices) == self.num_samples
 
-        return iter(indices_list[self.rank])
+        return iter(indices)
 
     def auto_iter(self):
         if self.partition_strategy['method']=='manual':
@@ -122,11 +115,15 @@ class Distributed_Elastic_Sampler(Sampler[T_co]):
             assert len(indices) == self.total_size
 
             # subsample
-            indices = indices[self.rank:self.total_size:self.num_replicas]
-            assert len(indices) == self.num_samples
-
-
-            return iter(indices)
+            pre_index = 0
+            indices_list = []
+            for val in self.num_samples:
+                indices_list.append(indices[pre_index:pre_index + val])
+                pre_index += val
+            # subsample
+            for indices in indices_list:
+                assert len(indices_list[self.rank]) == self.num_samples[self.rank]
+            return iter(indices_list[self.rank])
 
 
     def __iter__(self) -> Iterator[T_co]:
