@@ -41,20 +41,21 @@ class Distributed_Elastic_Sampler(Sampler[T_co]):
         self.rank = rank
         self.epoch = 0
         self.drop_last = drop_last
-        self.partition_strategy=partition_strategy
+        self.partition_strategy=partition_strategy #这里是我设置的一些策略，manual就是代表人工规定数据的划分
         # If the dataset length is evenly divisible by # of replicas, then there
         # is no need to drop any data, since the dataset will be split equally.
         self.num_samples=None
         self.total_size=None
-        if self.partition_strategy["method"]=='even':
+        if self.partition_strategy["method"]=='even': #method==even代表的是原本的DistributedSampler的实现
             self.even_partition()
         else:
             self.auto_partition()
         self.shuffle = shuffle
         self.seed = seed
-    def auto_partition(self):
+    def auto_partition(self): #人工划分数据集的实现
         if self.partition_strategy["method"]=="manual":
-            self.num_samples= self.partition_strategy["manual_partition_list"]
+            #self.num_samples表示的是sample的list,例如：cifar10有50000个训练样例，self.num_samples=[40000,10000]代表的就是GPU0训练40000个样例，GPU1训练10000个样例
+            self.num_samples= self.partition_strategy["manual_partition_list"] 
             assert self.num_replicas == len(self.num_samples), str(self.num_replicas)+" not equal to "+str(len(self.num_samples))
             self.total_size=sum(self.num_samples)
             assert self.total_size==len(self.dataset), str(self.total_size)+" not equal to "+str(len(self.dataset))
