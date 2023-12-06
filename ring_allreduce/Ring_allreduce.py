@@ -32,6 +32,24 @@ def ring_allreduce(para_tensor):
         recv_block_index = ((recv_block_index - 1) + size) % size
 
 
+    #all_gather
+    send_block_index = (rank+1)%size
+    recv_block_index = rank
+    for j in range(size-1):
+        buff = blocks[send_block_index].clone()
+        buff1 = blocks[send_block_index].clone()
+        if rank % 2 == 0:
+            dist.send(buff, right)
+            dist.recv(buff1, left)
+            blocks[recv_block_index] = buff1
+        else:
+            dist.recv(buff, left)
+            dist.send(buff1, right)
+            blocks[recv_block_index] = buff
+        send_block_index = ((send_block_index - 1) + size) % size
+        recv_block_index = ((recv_block_index - 1) + size) % size
+    return torch.cat(blocks,dim=0)
+
 def setup():
     init_process_group(backend="nccl")
     # 这句话的作用是设置当前进程使用的 CUDA 设备。
@@ -46,17 +64,19 @@ def main():
     setup()
     local_rank = int(os.environ["LOCAL_RANK"])
     if local_rank == 0:
-        tmp = torch.Tensor([1, 1, 1, 1]).cuda()
+        tmp = torch.Tensor([1, 1, 1, 1,1,1,1,1]).cuda()
     elif local_rank == 1:
-        tmp = torch.Tensor([2, 2, 2, 2]).cuda()
+        tmp = torch.Tensor([2, 2, 2, 2,2, 2, 2, 2]).cuda()
     elif local_rank == 2:
-        tmp = torch.Tensor([3, 3, 3, 3]).cuda()
+        tmp = torch.Tensor([3, 3, 3, 3,3, 3, 3, 3]).cuda()
     elif local_rank == 3:
-        tmp = torch.Tensor([4, 4, 4, 4]).cuda()
+        tmp = torch.Tensor([4, 4, 4, 4,4, 4, 4, 4]).cuda()
 
-    print(tmp.shape)
-    allreduce(tmp)
-    print("My rank is ", local_rank, "The tmp is", tmp)
+    if local_rank==0:
+        print("My rank is ", local_rank, "The original tmp is", tmp,"shape",tmp.shape)
+    tmp=ring_allreduce(tmp)
+    if local_rank==0:
+        print("My rank is ", local_rank, "The final tmp is", tmp,"shape",tmp.shape)
     destroy()
 
 
