@@ -226,7 +226,6 @@ def average_gradients(model, args):
     size = float(dist.get_world_size())
     for param in model.parameters():
         dist.all_reduce(param.grad.data, op=dist.ReduceOp.SUM)
-        param.grad.data /= size
 
 
 if __name__ == "__main__":
