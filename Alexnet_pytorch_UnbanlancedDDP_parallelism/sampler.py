@@ -104,7 +104,7 @@ class Distributed_Elastic_Sampler(Sampler[T_co]):
 
         return iter(indices)
 
-    def auto_iter(self):
+    def auto_iter(self):  #自己定义的迭代器返回函数
         if self.partition_strategy['method']=='manual':
             if self.shuffle:
                 g = torch.Generator()
@@ -115,7 +115,7 @@ class Distributed_Elastic_Sampler(Sampler[T_co]):
 
             assert len(indices) == self.total_size
 
-            # subsample
+            # subsample 最重要的是这一段，这段代码的例子例如：如果数据划分是[40000,10000] ，则GPU0对应indices_list[0],是一个有40000个下标的list，GPU1对应indices_list[1],是一个有10000个下标的list
             pre_index = 0
             indices_list = []
             for val in self.num_samples:
@@ -127,11 +127,11 @@ class Distributed_Elastic_Sampler(Sampler[T_co]):
             return iter(indices_list[self.rank])
 
 
-    def __iter__(self) -> Iterator[T_co]:
+    def __iter__(self) -> Iterator[T_co]:  #这个是在外面调用enumerate时候会调用的函数
         if self.partition_strategy['method']=='even':
             return self.even_iter()
         else:
-            return self.auto_iter()
+            return self.auto_iter() 
     def __len__(self) -> int:
         return self.num_samples[self.rank]
 
