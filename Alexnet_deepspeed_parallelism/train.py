@@ -20,6 +20,7 @@ from deepspeed.accelerator import get_accelerator
 # define by myself
 from sampler import Distributed_Elastic_Sampler
 from typing import Iterable, TypeVar
+import numpy as np
 
 
 def get_args():
@@ -54,9 +55,9 @@ def get_args():
                         default=[30000, 20000],
                         help='different processes\' data proportion')
 
-    parser.add_argument('--mini_batch_size_per_gpu',
+    parser.add_argument('--batch_size',
                         type=int,
-                        default=8,
+                        default=[30,20],
                         help='In accordance with deepspeed json file:train_micro_batch_size_per_gpu')
 
     parser = deepspeed.add_config_arguments(parser)
@@ -112,7 +113,6 @@ def dataset_split(
         args,
         dataset: torch.utils.data.Dataset
 ) -> InfiniteIterator:
-    local_rank = int(os.environ["LOCAL_RANK"])
 
     sampler_dict = \
         {
@@ -122,7 +122,7 @@ def dataset_split(
 
     sampler = Distributed_Elastic_Sampler(dataset=dataset, partition_strategy=sampler_dict)
     train_loader = DataLoader(dataset=dataset,
-                              batch_size=args.mini_batch_size_per_gpu,
+                              batch_size=args.batch_size[args.local_rank],
                               shuffle=False,
                               sampler=sampler,
                               pin_memory=True,
@@ -145,7 +145,7 @@ def train(args, part='parameters'):
     trainset = cifar_trainset(args.local_rank)
     train_loader = dataset_split(args=args, dataset=trainset)
 
-    model_engine, optimizer, train_loader, _ = deepspeed.initialize(
+    model_engine, optimizer, _, _ = deepspeed.initialize(
         args=args,
         model=net,
         model_parameters=[p for p in net.parameters() if p.requires_grad],
@@ -166,6 +166,11 @@ def train(args, part='parameters'):
 
     print(type(train_loader))
     print("My rank is:", local_rank, "The trainloader size is ", len(train_loader))
+
+    grad_portion = args.batch_size / np.sum(args.batch_size)
+    if local_rank==0:
+        print("The grad_portion is ",grad_portion)
+
     if local_rank == 0:
         start_time = time.time()
 
@@ -180,11 +185,11 @@ def train(args, part='parameters'):
 
             outputs = model_engine(inputs)
             loss = criterion(outputs, labels)
-            model_engine.backward(loss)
+            model_engine.backward(loss*grad_portion[local_rank])
             model_engine.step()
 
             # print statistics
-            print('[Rank %d][EPOCH %d][INDEX %d] The minibatch loss is %.5f' % (local_rank, epoch, i + 1, loss.item()))
+            #print('[Rank %d][EPOCH %d][INDEX %d] The minibatch loss is %.5f' % (local_rank, epoch, i + 1, loss.item()))
             running_loss += loss.item()
             if args.local_rank == 0 and i % args.log_interval == (
                     args.log_interval - 1):  # print every log_interval mini-batches

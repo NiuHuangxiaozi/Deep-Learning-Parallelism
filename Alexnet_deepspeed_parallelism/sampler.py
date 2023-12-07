@@ -55,7 +55,7 @@ class Distributed_Elastic_Sampler(Sampler[T_co]):
     def auto_partition(self):
         if self.partition_strategy["method"]=="manual":
             self.num_samples= self.partition_strategy["manual_partition_list"]
-            assert (self.num_replicas == len(self.num_samples))
+            assert self.num_replicas == len(self.num_samples), str(self.num_replicas)+" not equal to "+str(len(self.num_samples))
             self.total_size=sum(self.num_samples)
             assert self.total_size==len(self.dataset), str(self.total_size)+" not equal to "+str(len(self.dataset))
         else:
