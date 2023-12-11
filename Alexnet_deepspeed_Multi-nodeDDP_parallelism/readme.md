@@ -1,1 +1,1 @@
-hello
+本次实验是在deepspeed上实现两个节点的DDP。
