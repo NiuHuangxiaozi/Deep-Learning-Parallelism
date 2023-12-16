@@ -9,19 +9,18 @@ import torch.distributed as dist
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
-from torchvision.models import AlexNet
-from torchvision.models import vgg19
+import torchvision.models as models
 import torch.optim as optim
 from torch.distributed import init_process_group, destroy_process_group
 from argparse import Namespace
 from sampler import Distributed_Elastic_Sampler
 from torch.utils.data import DataLoader, Dataset
+from model import Resnet_large
 
-
-def cifar_set(local_rank, dl_path='/home/'):
+def cifar_set(local_rank, dl_path='/home/ainet/wsj/'):
     transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
+        transforms.Resize(512),
+        transforms.CenterCrop(449),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
@@ -70,9 +69,12 @@ def train(args, train_data):
     train_loader = dataset_split(args, train_data)
     print('My rank is %d. The length of the train_loader is %d.' % (args.global_rank, len(train_loader)))
 
-    torch.cuda.set_device(args.local_rank)
-    model = AlexNet(num_classes=10).cuda()
+    resnet152 = models.resnet152(pretrained=False)
+    model = Resnet_large(resnet152).cuda()
 
+    if args.global_rank==0:
+        total = sum([param.nelement() for param in model.parameters()])
+        print("Number of parameter: %.2fM" % (total / 1e6))
     optimizer = optim.Adam(model.parameters(), lr=0.001, )
     criterion = nn.CrossEntropyLoss()
 
@@ -145,11 +147,11 @@ def Get_args():
                         help='A method about how to split data between different processes.')
     parser.add_argument('--manual_partition_lists',
                         type=list,
-                        default=[30000, 20000],
+                        default=[40000, 10000],
                         help='different processes\' data proportion')
     parser.add_argument('--batch_size',
                         type=list,
-                        default=[30, 20],
+                        default=[80, 20],
                         help='different processes\' data proportion')
 
     parser.add_argument('--train_loader_shuffle',
