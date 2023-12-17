@@ -83,21 +83,23 @@ def train(args, train_data):
     model.train()
     for epoch in range(args.epochs):  # loop over the dataset multiple times
         running_loss = 0.0
-        if args.local_rank == 0:
+
+        if args.local_rank == 0: #开始记录时间
             start_time = time.time()
         for i, data in enumerate(train_loader):
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = data[0].cuda(), data[1].cuda()
             if i == 0:
                 print("The input shape is ", inputs.shape)
-            optimizer.zero_grad()
 
             outputs = model(inputs)
             loss = criterion(outputs, labels)
-
             (loss * grad_portion[args.global_rank]).backward()
-            average_gradients(model, args)
-            optimizer.step()
+
+            if (i + 1) % args.gradient_step == 0: #梯度累计够了开始更新参数
+                average_gradients(model, args)
+                optimizer.step()
+                optimizer.zero_grad()
 
             # print statistics
             # print('[Rank %d][EPOCH %d][INDEX %d] The minibatch loss is %.5f' % (args.local_rank, epoch, i + 1, loss.item()))
@@ -140,6 +142,7 @@ def Get_args():
     parser.add_argument('--local_rank', default=-1, type=int, help='Local rank always refer to specific gpu.')
     parser.add_argument('--global_rank', default=-1, type=int, help='Global Rank.')
     parser.add_argument('--log_interval', type=int, default=50, help="print average loss per interval")
+    parser.add_argument('--gradient_step', type=int, default=10, help="gradient accumulation")
 
     parser.add_argument('--data_partition_method',
                         type=str,
