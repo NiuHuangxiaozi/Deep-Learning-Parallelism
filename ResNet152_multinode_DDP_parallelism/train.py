@@ -143,7 +143,7 @@ def Get_args():
     parser.add_argument('--global_rank', default=-1, type=int, help='Global Rank.')
     parser.add_argument('--log_interval', type=int, default=50, help="print average loss per interval")
     parser.add_argument('--gradient_step', type=int, default=10, help="gradient accumulation")
-
+    parser.add_argument('--data_path', type=str, default='./data/', help="Dataset path")
     parser.add_argument('--data_partition_method',
                         type=str,
                         default='manual',
@@ -181,7 +181,7 @@ def main():
     args.global_rank = int(os.environ["RANK"])
     if args.local_rank == 0:
         print("The config is :", args)
-    train_data, test_data = cifar_set(args.local_rank)
+    train_data, test_data = cifar_set(args.local_rank,args.data_path)
     model = train(args, train_data)
     print("RANK :", args.global_rank, "All Finished")
     ddp_destroy()
