@@ -4,7 +4,9 @@
 
 ## 一、项目介绍
 
-这是一个学习pytorch的数据并行实验使用resnet152模型，并自己借鉴pytorch tutorial实现了数据并行中的all_reduce操作和梯度累计操作。
+这是一个学习pytorch的数据并行实验使用resnet152模型，并借鉴pytorch tutorial和官方DDP实现了数据并行和梯度累计操作。
+
+PytorchDDP使用DistributedDataParallel，AllReudce是简单用dist.all_reduce。
 
 [Writing Distributed Applications with PyTorch — PyTorch Tutorials 2.2.0+cu121 documentation](https://pytorch.org/tutorials/intermediate/dist_tuto.html)
 
