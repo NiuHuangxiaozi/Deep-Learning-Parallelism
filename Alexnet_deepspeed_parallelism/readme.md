@@ -1,4 +1,4 @@
-# 基于deepspeed的Batchsize,Datasize任意划分的本地分布式训练实验
+# 基于deepspeed的Batchsize,Datasize任意划分的单机双卡训练实验
 
 ### 一、实验内容
 
